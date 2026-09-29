@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# generated assets / local runs
+runs/
+outputs/
+*.png
+*.jpg
+*.mp4
+*.wav
+!docs/assets/*.png
+
+.DS_Store
+.idea/
+.vscode/
