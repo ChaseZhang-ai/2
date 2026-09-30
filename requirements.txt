@@ -1,0 +1,12 @@
+# ZhuluAI - no third-party runtime dependencies for the core engine.
+# The generation modules talk to a ComfyUI server over HTTP; GPU work happens
+# there, not in this repo, so the control plane stays pure-Python.
+#
+# optional, for a full local deployment:
+#   fastapi>=0.110   # control-plane API
+#   uvicorn>=0.29
+#   requests>=2.31   # ComfyUI HTTP client
+#
+# optional, for real embeddings in the RAG service (any of these):
+#   sentence-transformers>=2.7
+#   openai>=1.30
