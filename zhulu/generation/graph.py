@@ -83,3 +83,77 @@ def _meta_block(meta: dict[str, Any]) -> dict[str, Any]:
     return dict(meta) if meta else {}
 
 
+@dataclass
+class WorkflowGraph:
+    """A DAG of generation nodes keyed by node id."""
+
+    nodes: dict[str, Node] = field(default_factory=dict)
+
+    def add(self, node: Node) -> "WorkflowGraph":
+        self.nodes[node.node_id] = node
+        return self
+
+    def add_comfy_node(self, node_id: str, payload: dict[str, Any]) -> "WorkflowGraph":
+        self.nodes[node_id] = Node.from_comfy(node_id, payload)
+        return self
+
+    def edges(self) -> list[tuple[str, str]]:
+        out: list[tuple[str, str]] = []
+        for node in self.nodes.values():
+            for src, _slot in node.links():
+                out.append((src, node.node_id))
+        return out
+
+    def topo_order(self) -> list[str]:
+        indeg = {nid: 0 for nid in self.nodes}
+        adj: dict[str, list[str]] = {nid: [] for nid in self.nodes}
+        for src, dst in self.edges():
+            if src not in self.nodes:
+                raise ValueError(f"edge references missing node {src!r}")
+            adj[src].append(dst)
+            indeg[dst] += 1
+        ready = [n for n, d in indeg.items() if d == 0]
+        order: list[str] = []
+        while ready:
+            n = ready.pop()
+            order.append(n)
+            for dst in adj[n]:
+                indeg[dst] -= 1
+                if indeg[dst] == 0:
+                    ready.append(dst)
+        if len(order) != len(self.nodes):
+            raise ValueError("workflow graph contains a cycle")
+        return order
+
+    def to_comfy(self) -> dict[str, Any]:
+        return {nid: node.to_comfy() for nid, node in self.nodes.items()}
+
+    @classmethod
+    def from_comfy(cls, payload: dict[str, Any]) -> "WorkflowGraph":
+        g = cls()
+        for nid, node in payload.items():
+            g.add_comfy_node(nid, node)
+        return g
+
+    def signature(self) -> str:
+        """Stable hash of the weight-relevant structure (volatile keys removed)."""
+        canonical = {
+            nid: {
+                "class_type": node.class_type,
+                "inputs": _strip_volatile(node.inputs),
+                "meta": _strip_volatile(node.meta),
+            }
+            for nid, node in sorted(self.nodes.items())
+        }
+        blob = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(blob.encode()).hexdigest()[:16]
+
+    def estimated_vram_mb(self) -> int:
+        """Rough resident-memory estimate: sum of per-node declared cost."""
+        total = 0
+        for node in self.nodes.values():
+            total += int(node.meta.get("vram_mb", 0))
+        return total
+
+    def __len__(self) -> int:
+        return len(self.nodes)
