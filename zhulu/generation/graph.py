@@ -34,3 +34,23 @@ _VOLATILE_KEYS = {
 }
 
 
+def _is_link(value: Any) -> bool:
+    """A ComfyUI link is ``[node_id, output_slot]`` with a *string* node id."""
+    return (
+        isinstance(value, list)
+        and len(value) == 2
+        and isinstance(value[0], str)
+        and isinstance(value[1], int)
+    )
+
+
+def _strip_volatile(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _strip_volatile(v) for k, v in value.items() if k not in _VOLATILE_KEYS}
+    if isinstance(value, list):
+        if _is_link(value):
+            return ["<link>", value[1]]
+        return [_strip_volatile(v) for v in value]
+    return value
+
+
