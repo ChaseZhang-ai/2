@@ -54,3 +54,32 @@ def _strip_volatile(value: Any) -> Any:
     return value
 
 
+@dataclass
+class Node:
+    node_id: str
+    class_type: str
+    inputs: dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
+
+    def to_comfy(self) -> dict[str, Any]:
+        return {"class_type": self.class_type, "inputs": self.inputs, **_meta_block(self.meta)}
+
+    @classmethod
+    def from_comfy(cls, node_id: str, payload: dict[str, Any]) -> "Node":
+        return cls(
+            node_id=node_id,
+            class_type=payload["class_type"],
+            inputs=dict(payload.get("inputs", {})),
+            meta={k: v for k, v in payload.items() if k not in {"class_type", "inputs"}},
+        )
+
+    def links(self) -> Iterator[tuple[str, int]]:
+        for value in self.inputs.values():
+            if _is_link(value):
+                yield value[0], value[1]
+
+
+def _meta_block(meta: dict[str, Any]) -> dict[str, Any]:
+    return dict(meta) if meta else {}
+
+
