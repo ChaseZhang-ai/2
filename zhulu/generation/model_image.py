@@ -72,3 +72,80 @@ def denoise_schedule(steps: int, structure_frac: float = 0.34) -> list[float]:
     return schedule
 
 
+def build_model_image_graph(req: ModelImageRequest) -> WorkflowGraph:
+    g = WorkflowGraph()
+    g.add(Node("1", "LoadImage", {"image": req.product_image}, {"vram_mb": 0}))
+    g.add(
+        Node(
+            "2",
+            "SegmentSubject",
+            {"image": ["1", 0], "model": "sam_vit_h", "threshold": 0.55},
+            {"vram_mb": 2600},
+        )
+    )
+    g.add(
+        Node(
+            "3",
+            "DepthAnythingV2",
+            {"image": ["1", 0], "mask": ["2", 0], "resolution": 1024},
+            {"vram_mb": 1800},
+        )
+    )
+    g.add(
+        Node(
+            "4",
+            "PoseSkeleton",
+            {"preset": "standing_front", "canvas": [req.width, req.height]},
+            {"vram_mb": 200},
+        )
+    )
+    g.add(
+        Node(
+            "5",
+            "CheckpointLoaderSimple",
+            {"ckpt_name": "flux1-dev.safetensors"},
+            {"vram_mb": 12000},
+        )
+    )
+    g.add(Node("6", "LoraLoader", {"lora_name": req.scene_lora, "strength": 0.8, "model": ["5", 0]}, {"vram_mb": 400}))
+    g.add(
+        Node(
+            "7",
+            "ControlNetApplyAdvanced",
+            {
+                "positive": req.prompt,
+                "negative": req.negative,
+                "depth": ["3", 0],
+                "pose": ["4", 0],
+                "strength": 0.65,
+                "end_percent": 0.8,
+            },
+            {"vram_mb": 2500},
+        )
+    )
+    g.add(
+        Node(
+            "8",
+            "KSamplerScheduled",
+            {
+                "model": ["6", 0],
+                "conditioning": ["7", 0],
+                "steps": req.steps,
+                "cfg": req.cfg,
+                "seed": req.seed,
+                "schedule": denoise_schedule(req.steps),
+            },
+            {"vram_mb": 500},
+        )
+    )
+    g.add(
+        Node(
+            "9",
+            "IdentityFixup",
+            {"image": ["8", 0], "face_ref": ["1", 0], "weight": 0.4},
+            {"vram_mb": 1500},
+        )
+    )
+    g.add(Node("10", "UpscaleColourGrade", {"image": ["9", 0], "scale": 2, "lut": "neutral"}, {"vram_mb": 1200}))
+    g.add(Node("11", "SaveImage", {"images": ["10", 0], "filename_prefix": req.output_prefix}, {"vram_mb": 0}))
+    return g
