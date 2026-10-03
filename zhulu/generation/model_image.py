@@ -37,3 +37,38 @@ __all__ = [
 ]
 
 
+@dataclass
+class ModelImageRequest:
+    product_image: str
+    output_prefix: str = "model_img"
+    scene_lora: str = "scene_studio_v3.safetensors"
+    width: int = 1024
+    height: int = 1365
+    steps: int = 28
+    cfg: float = 3.5
+    prompt: str = "a professional model wearing the product, studio lighting, sharp focus"
+    negative: str = "blurry, deformed hands, extra fingers, watermark, distorted logo"
+    seed: int = 0
+    vram_mb: int = 9000
+
+
+def denoise_schedule(steps: int, structure_frac: float = 0.34) -> list[float]:
+    """Per-step denoise strengths: a high-structure head, low-identity tail.
+
+    Returns ``steps`` values in (0, 1]. The head lets the model reshape the scene;
+    the tail keeps it from re-rendering the product's identity away.
+    """
+    if steps <= 0:
+        raise ValueError("steps must be positive")
+    head = max(1, int(round(steps * structure_frac)))
+    schedule: list[float] = []
+    start, end = 0.85, 0.35
+    for i in range(steps):
+        if i < head:
+            t = i / max(head - 1, 1)
+            schedule.append(start + (end - start) * t)
+        else:
+            schedule.append(end)
+    return schedule
+
+
