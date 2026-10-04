@@ -33,3 +33,29 @@ __all__ = [
 ]
 
 
+@dataclass
+class VideoRequest:
+    product_image: str
+    output_prefix: str = "product_video"
+    seconds: float = 10.0
+    fps: int = 24
+    keyframe_fps: int = 6
+    width: int = 832
+    height: int = 1216
+    motion_strength: float = 0.6
+    prompt: str = "slow parallax push-in around the product, soft studio light"
+    seed: int = 0
+    vram_mb: int = 11000
+
+
+@dataclass
+class DigitalHumanRequest:
+    portrait: str
+    audio: str
+    output_prefix: str = "digital_human"
+    fps: int = 25
+    sync_gate: float = 0.85
+    seed: int = 0
+    vram_mb: int = 12000
+
+
