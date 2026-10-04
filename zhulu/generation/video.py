@@ -59,3 +59,31 @@ class DigitalHumanRequest:
     vram_mb: int = 12000
 
 
+def frame_interpolation_plan(total_frames: int, keyframe_fps: int, fps: int) -> list[tuple[int, int]]:
+    """Split the timeline into (start, end) keyframe pairs to interpolate.
+
+    Each pair yields ``fps // keyframe_fps`` output frames via optical flow.
+    """
+    if keyframe_fps <= 0 or fps <= 0:
+        raise ValueError("fps values must be positive")
+    if fps % keyframe_fps != 0:
+        raise ValueError("fps must be an integer multiple of keyframe_fps")
+    ratio = fps // keyframe_fps
+    pairs: list[tuple[int, int]] = []
+    n_key = max(2, total_frames // ratio + 1)
+    for i in range(n_key - 1):
+        pairs.append((i, i + 1))
+    return pairs
+
+
+def lip_sync_gate(lse_c: float, lse_d: float, min_conf: float = 0.85) -> dict[str, float | bool]:
+    """Score lip-sync and decide whether to accept or re-run the mouth region.
+
+    ``lse_c`` (sync confidence, higher better) and ``lse_d`` (distance, lower
+    better) follow the SyncNet convention. We normalise into a [0,1] confidence
+    and compare against the gate.
+    """
+    conf = max(0.0, min(1.0, 0.5 * (1.0 - lse_d) + 0.5 * lse_c))
+    return {"confidence": conf, "accept": conf >= min_conf, "rerun_mouth": conf < min_conf}
+
+
