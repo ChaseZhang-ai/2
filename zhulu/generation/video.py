@@ -87,3 +87,81 @@ def lip_sync_gate(lse_c: float, lse_d: float, min_conf: float = 0.85) -> dict[st
     return {"confidence": conf, "accept": conf >= min_conf, "rerun_mouth": conf < min_conf}
 
 
+def build_product_video_graph(req: VideoRequest) -> WorkflowGraph:
+    total = int(round(req.seconds * req.fps))
+    g = WorkflowGraph()
+    g.add(Node("1", "LoadImage", {"image": req.product_image}, {"vram_mb": 0}))
+    g.add(
+        Node(
+            "2",
+            "WanI2VSampler",
+            {
+                "image": ["1", 0],
+                "prompt": req.prompt,
+                "keyframe_fps": req.keyframe_fps,
+                "width": req.width,
+                "height": req.height,
+                "motion_strength": req.motion_strength,
+                "seed": req.seed,
+            },
+            {"vram_mb": 11000},
+        )
+    )
+    g.add(
+        Node(
+            "3",
+            "OpticalFlowInterpolate",
+            {"frames": ["2", 0], "target_fps": req.fps, "pairs": frame_interpolation_plan(total, req.keyframe_fps, req.fps)},
+            {"vram_mb": 800},
+        )
+    )
+    g.add(
+        Node(
+            "4",
+            "TemporalRefine",
+            {"frames": ["3", 0], "window": 8, "overlap": 2, "strength": 0.35},
+            {"vram_mb": 1400},
+        )
+    )
+    g.add(Node("5", "MuxAudioAndSave", {"frames": ["4", 0], "filename_prefix": req.output_prefix}, {"vram_mb": 200}))
+    return g
+
+
+def build_digital_human_graph(req: DigitalHumanRequest) -> WorkflowGraph:
+    g = WorkflowGraph()
+    g.add(Node("1", "LoadPortrait", {"image": req.portrait}, {"vram_mb": 0}))
+    g.add(Node("2", "LoadAudio", {"audio": req.audio, "sample_rate": 16000}, {"vram_mb": 0}))
+    g.add(
+        Node(
+            "3",
+            "AudioToMotion",
+            {"audio": ["2", 0], "emotion": "neutral", "fps": req.fps},
+            {"vram_mb": 1500},
+        )
+    )
+    g.add(
+        Node(
+            "4",
+            "TalkingHeadSampler",
+            {"portrait": ["1", 0], "motion": ["3", 0], "seed": req.seed},
+            {"vram_mb": 12000},
+        )
+    )
+    g.add(
+        Node(
+            "5",
+            "SyncNetScore",
+            {"frames": ["4", 0], "audio": ["2", 0]},
+            {"vram_mb": 900},
+        )
+    )
+    g.add(
+        Node(
+            "6",
+            "ConditionalMouthRerun",
+            {"frames": ["4", 0], "score": ["5", 0], "gate": req.sync_gate},
+            {"vram_mb": 2000},
+        )
+    )
+    g.add(Node("7", "EncodeSave", {"frames": ["6", 0], "fps": req.fps, "filename_prefix": req.output_prefix}, {"vram_mb": 200}))
+    return g
