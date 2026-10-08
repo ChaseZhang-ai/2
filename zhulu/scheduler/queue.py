@@ -76,3 +76,35 @@ class Job:
         return float(self.priority) - min(age_bonus, 2.0)
 
 
+@dataclass
+class Batch:
+    signature: str
+    jobs: list[Job] = field(default_factory=list)
+    vram_mb: int = 0
+
+    def add(self, job: Job) -> None:
+        self.jobs.append(job)
+        self.vram_mb += job.vram_mb
+
+    def est_seconds(self) -> float:
+        # One shared load per batch plus the sum of per-job sampling time.
+        if not self.jobs:
+            return 0.0
+        load = 8.0
+        return load + sum(j.est_seconds for j in self.jobs)
+
+
+@dataclass
+class SchedulePlan:
+    batches: list[Batch]
+    makespan_seconds: float
+    single_job_makespan_seconds: float
+    total_jobs: int
+
+    @property
+    def speedup(self) -> float:
+        if self.makespan_seconds <= 0:
+            return float("inf")
+        return self.single_job_makespan_seconds / self.makespan_seconds
+
+
