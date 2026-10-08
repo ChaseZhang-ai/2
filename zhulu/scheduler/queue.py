@@ -108,3 +108,93 @@ class SchedulePlan:
         return self.single_job_makespan_seconds / self.makespan_seconds
 
 
+class CostAwareScheduler:
+    """Groups queued jobs into VRAM-bounded, signature-homogeneous batches."""
+
+    def __init__(
+        self,
+        vram_budget_mb: int = 24576,
+        safety_margin_mb: int = 1024,
+        max_batch_size: int = 16,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.vram_budget_mb = vram_budget_mb
+        self.safety_margin_mb = safety_margin_mb
+        self.max_batch_size = max_batch_size
+        self._clock = clock
+        self._counter = itertools.count()
+        self._heap: list[Job] = []
+
+    @property
+    def usable_vram_mb(self) -> int:
+        return self.vram_budget_mb - self.safety_margin_mb
+
+    def submit(self, job: Job) -> Job:
+        if job.seq == 0:
+            job.seq = next(self._counter)
+        job.submitted_at = self._clock()
+        job.sort_key = (job._effective_priority(), job._deadline_key(), job.seq)
+        heapq.heappush(self._heap, job)
+        return job
+
+    def submit_all(self, jobs: Iterable[Job]) -> None:
+        for j in jobs:
+            self.submit(j)
+
+    def pending(self) -> int:
+        return len(self._heap)
+
+    def _drain_sorted(self) -> list[Job]:
+        """Pop everything and re-sort by current effective priority."""
+        popped = []
+        while self._heap:
+            popped.append(heapq.heappop(self._heap))
+        # Recompute effective priority at drain time (ageing has advanced).
+        for j in popped:
+            j.sort_key = (j._effective_priority(), j._deadline_key(), j.seq)
+        popped.sort()
+        return popped
+
+    def plan(self) -> SchedulePlan:
+        """Produce an execution plan for all currently queued jobs."""
+        jobs = self._drain_sorted()
+        batches: list[Batch] = []
+        # Group by workflow signature, preserving priority order of first job.
+        groups: dict[str, list[Job]] = {}
+        order: list[str] = []
+        for j in jobs:
+            if j.workflow_signature not in groups:
+                groups[j.workflow_signature] = []
+                order.append(j.workflow_signature)
+            groups[j.workflow_signature].append(j)
+
+        for sig in order:
+            members = groups[sig]
+            current = Batch(signature=sig)
+            for job in members:
+                if job.vram_mb > self.usable_vram_mb:
+                    raise ValueError(
+                        f"job {job.job_id} needs {job.vram_mb}MB > budget {self.usable_vram_mb}MB"
+                    )
+                fits = current.vram_mb + job.vram_mb <= self.usable_vram_mb
+                room = len(current.jobs) < self.max_batch_size
+                if current.jobs and not (fits and room):
+                    batches.append(current)
+                    current = Batch(signature=sig)
+                current.add(job)
+            if current.jobs:
+                batches.append(current)
+
+        makespan = sum(b.est_seconds() for b in batches)
+        single = sum(8.0 + j.est_seconds for j in jobs)
+        return SchedulePlan(
+            batches=batches,
+            makespan_seconds=makespan,
+            single_job_makespan_seconds=single,
+            total_jobs=len(jobs),
+        )
+
+    def iter_batches(self) -> Iterator[Batch]:
+        """Drain and yield batches (consumes the queue)."""
+        for b in self.plan().batches:
+            yield b
