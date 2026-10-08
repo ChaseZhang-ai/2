@@ -41,3 +41,38 @@ __all__ = [
 ]
 
 
+class Priority(IntEnum):
+    INTERACTIVE = 0
+    CAMPAIGN = 1
+    BACKFILL = 2
+
+
+@dataclass(order=True)
+class Job:
+    """A single generation request."""
+
+    # sort key; the actual payload is excluded from comparisons
+    sort_key: tuple = field(init=False, repr=False)
+    seq: int = field(default=0)
+    job_id: str = field(default="", compare=False)
+    workflow_signature: str = field(default="", compare=False)
+    vram_mb: int = field(default=2048, compare=False)
+    priority: Priority = field(default=Priority.CAMPAIGN, compare=False)
+    submitted_at: float = field(default_factory=time.monotonic, compare=False)
+    deadline: float | None = field(default=None, compare=False)
+    est_seconds: float = field(default=1.5, compare=False)
+
+    def __post_init__(self) -> None:
+        self.sort_key = (self._effective_priority(), self._deadline_key(), self.seq)
+
+    def _deadline_key(self) -> float:
+        return self.deadline if self.deadline is not None else float("inf")
+
+    def _effective_priority(self) -> float:
+        # Ageing: every 30 s a waiting job gains 0.5 priority so backfill cannot
+        # starve behind an endless stream of interactive jobs.
+        waited = time.monotonic() - self.submitted_at
+        age_bonus = 0.5 * (waited / 30.0)
+        return float(self.priority) - min(age_bonus, 2.0)
+
+
