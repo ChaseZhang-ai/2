@@ -63,3 +63,17 @@ def _to_gray_grid(img: GrayImage, w: int, h: int, size: int) -> list[float]:
     return _resize_bilinear(img, w, h, size, size)
 
 
+def _bits_to_int(bits: Iterable[bool]) -> int:
+    v = 0
+    for b in bits:
+        v = (v << 1) | int(bool(b))
+    return v
+
+
+def average_hash(img: GrayImage, w: int, h: int, size: int = 8) -> int:
+    """Average hash: bit = pixel above the mean luminance."""
+    g = _to_gray_grid(img, w, h, size)
+    mean = sum(g) / len(g)
+    return _bits_to_int(px > mean for px in g)
+
+
