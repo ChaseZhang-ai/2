@@ -32,3 +32,34 @@ __all__ = ["average_hash", "difference_hash", "phash", "hamming", "GrayImage"]
 GrayImage = Sequence[int]
 
 
+def _resize_bilinear(src: GrayImage, w: int, h: int, nw: int, nh: int) -> list[float]:
+    """Bilinear resize of a row-major grayscale buffer.
+
+    Implemented by hand rather than with PIL so the control node has zero native
+    dependencies. ``src`` is ``w*h`` long.
+    """
+    out: list[float] = [0.0] * (nw * nh)
+    x_ratio = (w - 1) / (nw - 1) if nw > 1 else 0.0
+    y_ratio = (h - 1) / (nh - 1) if nh > 1 else 0.0
+    for j in range(nh):
+        fy = j * y_ratio
+        y0 = int(fy)
+        y1 = min(y0 + 1, h - 1)
+        wy = fy - y0
+        for i in range(nw):
+            fx = i * x_ratio
+            x0 = int(fx)
+            x1 = min(x0 + 1, w - 1)
+            wx = fx - x0
+            top = src[y0 * w + x0] * (1 - wx) + src[y0 * w + x1] * wx
+            bot = src[y1 * w + x0] * (1 - wx) + src[y1 * w + x1] * wx
+            out[j * nw + i] = top * (1 - wy) + bot * wy
+    return out
+
+
+def _to_gray_grid(img: GrayImage, w: int, h: int, size: int) -> list[float]:
+    if len(img) != w * h:
+        raise ValueError(f"buffer length {len(img)} != {w}x{h}")
+    return _resize_bilinear(img, w, h, size, size)
+
+
