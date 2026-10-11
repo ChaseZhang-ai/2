@@ -158,3 +158,11 @@ class Fingerprint:
         )
 
 
+def fingerprint(img: GrayImage, w: int, h: int) -> Fingerprint:
+    return Fingerprint(
+        ahash=average_hash(img, w, h),
+        dhash=difference_hash(img, w, h),
+        phash=phash(img, w, h),
+        width=w,
+        height=h,
+    )
