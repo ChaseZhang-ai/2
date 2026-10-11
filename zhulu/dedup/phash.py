@@ -77,3 +77,56 @@ def average_hash(img: GrayImage, w: int, h: int, size: int = 8) -> int:
     return _bits_to_int(px > mean for px in g)
 
 
+def difference_hash(img: GrayImage, w: int, h: int, size: int = 8) -> int:
+    """Difference hash: bit = pixel brighter than its right neighbour.
+
+    Uses a (size+1) x size grid so we get size*size comparisons.
+    """
+    g = _to_gray_grid(img, w, h, size + 1)
+    row = size + 1
+    bits: list[bool] = []
+    for j in range(size):
+        base = j * row
+        for i in range(size):
+            bits.append(g[base + i] > g[base + i + 1])
+    return _bits_to_int(bits)
+
+
+# Precomputed 8x8 DCT-II basis. phash keeps the top-left 8x8 of the DCT of a
+# 32x32 grayscale image; the DC term is dropped before comparing to the median.
+_DCT_N = 32
+_DCT_COS: list[list[float]] = [
+    [math.cos(math.pi * (2 * x + 1) * u / (2 * _DCT_N)) for x in range(_DCT_N)]
+    for u in range(_DCT_N)
+]
+
+
+def phash(img: GrayImage, w: int, h: int, size: int = 8, dct_size: int = 32) -> int:
+    """DCT perceptual hash (a.k.a. pHash), 64 bit."""
+    g = _to_gray_grid(img, w, h, dct_size)
+    # Separable DCT: rows then columns, keeping only the low-frequency block.
+    rows: list[list[float]] = [[0.0] * size for _ in range(dct_size)]
+    for y in range(dct_size):
+        base = y * dct_size
+        for u in range(size):
+            cu = _DCT_COS[u]
+            s = 0.0
+            for x in range(dct_size):
+                s += g[base + x] * cu[x]
+            rows[y][u] = s
+    low: list[float] = []
+    for u in range(size):
+        for v in range(size):
+            cu = _DCT_COS[u]
+            s = 0.0
+            for y in range(dct_size):
+                s += rows[y][v] * cu[y]
+            low.append(s)
+    # Drop DC (low[0]) from the median computation, standard pHash behaviour.
+    body = low[1:]
+    srt = sorted(body)
+    n = len(srt)
+    median = srt[n // 2] if n % 2 else 0.5 * (srt[n // 2 - 1] + srt[n // 2])
+    return _bits_to_int(px > median for px in body)
+
+
