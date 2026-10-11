@@ -130,3 +130,31 @@ def phash(img: GrayImage, w: int, h: int, size: int = 8, dct_size: int = 32) -> 
     return _bits_to_int(px > median for px in body)
 
 
+def hamming(a: int, b: int) -> int:
+    """Population count of ``a XOR b`` (number of differing bits).
+
+    Uses ``bin().count`` so the engine runs on Python 3.9 as well as 3.10+
+    (``int.bit_count`` landed in 3.10).
+    """
+    return bin(a ^ b).count("1")
+
+
+@dataclass(frozen=True)
+class Fingerprint:
+    """A combined fingerprint for one asset."""
+
+    ahash: int
+    dhash: int
+    phash: int
+    width: int
+    height: int
+
+    def distance(self, other: "Fingerprint") -> int:
+        """Max of the three hamming distances (conservative: worst case wins)."""
+        return max(
+            hamming(self.ahash, other.ahash),
+            hamming(self.dhash, other.dhash),
+            hamming(self.phash, other.phash),
+        )
+
+
