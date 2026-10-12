@@ -73,3 +73,57 @@ class DuplicateMatch:
     distance: int
 
 
+@dataclass
+class NearDuplicateIndex:
+    """Three BK-trees keyed by the three perceptual hashes."""
+
+    radius: int = 6
+    _trees: dict[str, BKTree] = field(default_factory=lambda: {"a": BKTree(), "d": BKTree(), "p": BKTree()})
+    _by_hash: dict[tuple[str, int], list[str]] = field(default_factory=dict)
+    _fp_by_id: dict[str, Fingerprint] = field(default_factory=dict)
+
+    def _insert(self, tag: str, key: int, asset_id: str) -> None:
+        self._trees[tag].add(key)
+        self._by_hash.setdefault((tag, key), []).append(asset_id)
+
+    def add(self, asset_id: str, fp: Fingerprint) -> None:
+        self._fp_by_id[asset_id] = fp
+        self._insert("a", fp.ahash, asset_id)
+        self._insert("d", fp.dhash, asset_id)
+        self._insert("p", fp.phash, asset_id)
+
+    def _candidates(self, tag: str, key: int) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for stored, dist in self._trees[tag].search(key, self.radius):
+            for asset_id in self._by_hash.get((tag, stored), ()):
+                prev = out.get(asset_id)
+                if prev is None or dist < prev:
+                    out[asset_id] = dist
+        return out
+
+    def query(self, fp: Fingerprint, exclude: Iterable[str] = ()) -> list[DuplicateMatch]:
+        """Return existing assets whose combined distance is within threshold.
+
+        A candidate must clear *every* hash (max-distance rule), so we start from
+        the tightest candidate set and filter.
+        """
+        skip = set(exclude)
+        merged: dict[str, int] = {}
+        for tag, key in (("d", fp.dhash), ("p", fp.phash), ("a", fp.ahash)):
+            for asset_id, dist in self._candidates(tag, key).items():
+                if asset_id in skip:
+                    continue
+                merged[asset_id] = max(merged.get(asset_id, 0), dist)
+        matches = [
+            DuplicateMatch(asset_id=aid, distance=dist)
+            for aid, dist in merged.items()
+            if dist <= self.radius
+        ]
+        matches.sort(key=lambda m: m.distance)
+        return matches
+
+    def is_duplicate(self, fp: Fingerprint) -> bool:
+        return bool(self.query(fp))
+
+    def __len__(self) -> int:
+        return len(self._fp_by_id)
