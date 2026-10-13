@@ -43,3 +43,34 @@ class SemanticScore:
     nearest: str | None
 
 
+@dataclass
+class SemanticDedup:
+    """Greedy diversity gate keyed on embeddings."""
+
+    threshold: float = 0.93
+    _seen: dict[str, list[float]] = field(default_factory=dict)
+
+    def score(self, asset_id: str, embedding: Sequence[float]) -> SemanticScore:
+        best = -1.0
+        nearest: str | None = None
+        for other_id, vec in self._seen.items():
+            sim = cosine(embedding, vec)
+            if sim > best:
+                best, nearest = sim, other_id
+        return SemanticScore(asset_id=asset_id, max_similarity=best, nearest=nearest)
+
+    def accept(self, asset_id: str, embedding: Sequence[float]) -> bool:
+        """Accept and register the asset if it is diverse enough to keep."""
+        s = self.score(asset_id, embedding)
+        if s.max_similarity >= self.threshold:
+            return False
+        self._seen[asset_id] = list(embedding)
+        return True
+
+    def select(self, candidates: Iterable[tuple[str, Sequence[float]]]) -> list[str]:
+        """Greedy selection: keep candidates that add a new content angle."""
+        kept: list[str] = []
+        for asset_id, emb in candidates:
+            if self.accept(asset_id, emb):
+                kept.append(asset_id)
+        return kept
