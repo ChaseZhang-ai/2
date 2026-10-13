@@ -23,3 +23,23 @@ from typing import Iterable, Sequence
 __all__ = ["cosine", "SemanticDedup", "SemanticScore"]
 
 
+def cosine(a: Sequence[float], b: Sequence[float]) -> float:
+    if len(a) != len(b):
+        raise ValueError("dimension mismatch")
+    dot = na = nb = 0.0
+    for x, y in zip(a, b):
+        dot += x * y
+        na += x * x
+        nb += y * y
+    if na == 0.0 or nb == 0.0:
+        return 0.0
+    return dot / math.sqrt(na * nb)
+
+
+@dataclass
+class SemanticScore:
+    asset_id: str
+    max_similarity: float
+    nearest: str | None
+
+
