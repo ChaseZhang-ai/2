@@ -24,3 +24,26 @@ __all__ = ["Document", "HybridRetriever", "rrf_fuse"]
 EmbeddingFn = Callable[[str], Sequence[float]]
 
 
+@dataclass
+class Document:
+    doc_id: str
+    text: str
+    metadata: dict = field(default_factory=dict)
+
+
+def rrf_fuse(
+    ranked_lists: Iterable[Sequence[str]],
+    k: int = 60,
+    weights: Sequence[float] | None = None,
+) -> list[tuple[str, float]]:
+    """Fuse ranked id lists into a single ranking."""
+    lists = list(ranked_lists)
+    if weights is None:
+        weights = [1.0] * len(lists)
+    scores: dict[str, float] = {}
+    for w, ranked in zip(weights, lists):
+        for rank, doc_id in enumerate(ranked):
+            scores[doc_id] = scores.get(doc_id, 0.0) + w / (k + rank + 1)
+    return sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+
+
