@@ -30,3 +30,33 @@ _RANGES = [
 ]
 
 
+def detect_language(text: str) -> str:
+    counts = {lang: 0 for lang, _, _ in _RANGES}
+    latin = 0
+    for ch in text:
+        code = ord(ch)
+        if ch.isascii() and ch.isalpha():
+            latin += 1
+            continue
+        for lang, lo, hi in _RANGES:
+            if lo <= code <= hi:
+                counts[lang] += 1
+                break
+    best = max(counts.items(), key=lambda kv: kv[1])
+    if best[1] == 0:
+        return "en" if latin else "en"
+    # Japanese text also contains kanji in the zh range; kana presence wins.
+    if best[0] == "zh" and counts["ja"] > 0:
+        return "ja"
+    return best[0]
+
+
+@dataclass
+class Answer:
+    text: str
+    language: str
+    sources: list[str]
+    escalated: bool
+    action: dict | None = None
+
+
