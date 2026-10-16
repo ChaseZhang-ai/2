@@ -60,3 +60,43 @@ class Answer:
     action: dict | None = None
 
 
+@dataclass
+class CustomerServiceAgent:
+    retriever: HybridRetriever
+    generate: Callable[[str, Sequence[Document], str], str] | None = None
+    min_score: float = 0.008
+    top_k: int = 4
+    tenant: str = "default"
+
+    def answer(self, query: str, history: Sequence[str] = ()) -> Answer:
+        lang = detect_language(query)
+        hits = self.retriever.search(query, top_k=self.top_k)
+        if not hits or hits[0][1] < self.min_score:
+            return Answer(
+                text=_escalation_message(lang),
+                language=lang,
+                sources=[],
+                escalated=True,
+                action={"type": "open_ticket", "tenant": self.tenant, "reason": "low_confidence"},
+            )
+        docs = [d for d, _ in hits]
+        sources = [d.doc_id for d in docs]
+        if self.generate is not None:
+            text = self.generate(query, docs, lang)
+        else:
+            text = docs[0].text
+        return Answer(text=text, language=lang, sources=sources, escalated=False)
+
+    def can_answer(self, query: str) -> bool:
+        hits = self.retriever.search(query, top_k=1)
+        return bool(hits) and hits[0][1] >= self.min_score
+
+
+def _escalation_message(lang: str) -> str:
+    return {
+        "zh": "抱歉，这个问题我需要转接人工客服为您确认，请稍候。",
+        "en": "I'd like to have a specialist confirm this for you - transferring you now.",
+        "ja": "申し訳ございません。担当者に確認いたしますので少々お待ちください。",
+        "ko": "죄송합니다. 담당자에게 확인 후 안내드리겠습니다.",
+        "ru": "Уточню у специалиста и вернусь к вам.",
+    }.get(lang, "Let me have a specialist confirm this for you.")
