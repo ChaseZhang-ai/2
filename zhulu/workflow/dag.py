@@ -32,3 +32,15 @@ from typing import Any, Callable, Iterable
 __all__ = ["NodeStatus", "Task", "TaskResult", "WorkflowEngine", "DAGError"]
 
 
+class DAGError(Exception):
+    pass
+
+
+class NodeStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
