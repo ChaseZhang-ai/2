@@ -44,3 +44,29 @@ class NodeStatus(str, Enum):
     SKIPPED = "skipped"
 
 
+@dataclass
+class Task:
+    """One node: an action plus its scheduling metadata."""
+
+    task_id: str
+    action: Callable[[dict[str, Any]], Any]
+    depends_on: tuple[str, ...] = ()
+    max_retries: int = 2
+    base_backoff: float = 0.2
+    # predicate over the resolved upstream outputs; None means "always run"
+    condition: Callable[[dict[str, Any]], bool] | None = None
+
+    def idempotency_key(self, run_id: str) -> str:
+        return hashlib.sha256(f"{run_id}:{self.task_id}".encode()).hexdigest()[:16]
+
+
+@dataclass
+class TaskResult:
+    task_id: str
+    status: NodeStatus
+    output: Any = None
+    error: str | None = None
+    attempts: int = 0
+    duration: float = 0.0
+
+
