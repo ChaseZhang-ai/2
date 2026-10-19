@@ -48,3 +48,42 @@ def make_approval_flow(policy: ApprovalPolicy | None = None) -> Task:
     return Task("approval", action)
 
 
+def make_ticket_router(
+    routes: Sequence[tuple[str, Callable[[str], bool]]],
+    default_queue: str = "general",
+) -> Task:
+    """Route a ticket to a queue by keyword predicates (first match wins)."""
+    compiled = [(queue, pred) for queue, pred in routes]
+
+    def action(ctx: dict[str, Any]) -> dict[str, Any]:
+        text = str(ctx.get("ticket_text", ""))
+        for queue, pred in compiled:
+            if pred(text):
+                return {"queue": queue, "matched": True}
+        return {"queue": default_queue, "matched": False}
+
+    return Task("route", action)
+
+
+def make_data_sync_flow(
+    fetch: Callable[[dict[str, Any]], Any],
+    transform: Callable[[Any], Any],
+    load: Callable[[Any], Any],
+    depends: tuple[str, ...] = (),
+) -> list[Task]:
+    """A three-stage ETL: fetch -> transform -> load, with retries on load."""
+
+    def t_fetch(ctx: dict[str, Any]) -> Any:
+        return fetch(ctx)
+
+    def t_transform(ctx: dict[str, Any]) -> Any:
+        return transform(ctx.get("fetch"))
+
+    def t_load(ctx: dict[str, Any]) -> Any:
+        return load(ctx.get("transform"))
+
+    return [
+        Task("fetch", t_fetch, depends_on=depends, max_retries=3),
+        Task("transform", t_transform, depends_on=("fetch",)),
+        Task("load", t_load, depends_on=("transform",), max_retries=3, base_backoff=0.5),
+    ]
