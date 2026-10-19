@@ -20,3 +20,31 @@ __all__ = [
 ]
 
 
+@dataclass
+class ApprovalPolicy:
+    """Thresholds that decide whether an approval auto-passes or needs a human."""
+
+    auto_approve_below: float = 1000.0
+    escalate_above: float = 50_000.0
+
+    def decide(self, amount: float, risk_score: float) -> str:
+        if amount >= self.escalate_above or risk_score >= 0.7:
+            return "escalate"
+        if amount < self.auto_approve_below and risk_score < 0.3:
+            return "auto_approve"
+        return "manager_review"
+
+
+def make_approval_flow(policy: ApprovalPolicy | None = None) -> Task:
+    """Return a task that classifies an approval request by amount and risk."""
+    policy = policy or ApprovalPolicy()
+
+    def action(ctx: dict[str, Any]) -> dict[str, Any]:
+        amount = float(ctx.get("amount", 0.0))
+        risk = float(ctx.get("risk_score", 0.0))
+        decision = policy.decide(amount, risk)
+        return {"decision": decision, "amount": amount, "risk_score": risk}
+
+    return Task("approval", action)
+
+
