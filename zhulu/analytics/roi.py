@@ -48,3 +48,37 @@ class AssetPerformance:
         return self.revenue / self.spend if self.spend else 0.0
 
 
+def attribute(events: Iterable[Event], spend: dict[str, float] | None = None) -> dict[str, AssetPerformance]:
+    """Aggregate per-asset performance; conversions carry their revenue."""
+    spend = spend or {}
+    perf: dict[str, AssetPerformance] = {}
+    last_click: dict[str, str] = {}
+    for e in sorted(events, key=lambda x: x.ts):
+        p = perf.setdefault(e.asset_id, AssetPerformance(e.asset_id))
+        if e.kind == "impression":
+            p.impressions += 1
+        elif e.kind == "click":
+            p.clicks += 1
+            last_click["session"] = e.asset_id
+        elif e.kind == "conversion":
+            p.conversions += 1
+            p.revenue += e.value
+    for asset_id, p in perf.items():
+        p.spend = spend.get(asset_id, 0.0)
+    return perf
+
+
+def campaign_roas(perf: dict[str, AssetPerformance]) -> dict[str, float]:
+    revenue = sum(p.revenue for p in perf.values())
+    spend = sum(p.spend for p in perf.values())
+    impressions = sum(p.impressions for p in perf.values())
+    conversions = sum(p.conversions for p in perf.values())
+    return {
+        "revenue": revenue,
+        "spend": spend,
+        "roas": revenue / spend if spend else 0.0,
+        "cpa": spend / conversions if conversions else 0.0,
+        "impressions": float(impressions),
+    }
+
+
