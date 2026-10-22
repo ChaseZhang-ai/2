@@ -82,3 +82,5 @@ def campaign_roas(perf: dict[str, AssetPerformance]) -> dict[str, float]:
     }
 
 
+def rank_assets(perf: dict[str, AssetPerformance], by: str = "roas", k: int = 10) -> list[AssetPerformance]:
+    return sorted(perf.values(), key=lambda p: getattr(p, by), reverse=True)[:k]
