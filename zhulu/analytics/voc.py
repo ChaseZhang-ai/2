@@ -125,3 +125,5 @@ def summarize_voc(reviews: Iterable[str], top_examples: int = 3) -> list[AspectS
     return out
 
 
+def top_negative_aspects(summaries: Sequence[AspectSummary], k: int = 3) -> list[AspectSummary]:
+    return sorted(summaries, key=lambda a: (a.mean_sentiment, -a.mentions))[:k]
