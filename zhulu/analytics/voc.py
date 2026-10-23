@@ -58,3 +58,38 @@ def _sentiment_tokens(text: str) -> list[str]:
     return out
 
 
+def _scan(tokens: Sequence[str], negators: set[str]) -> tuple[int, int]:
+    """Sum polarity over tokens, flipping sign inside a negation window."""
+    score = 0
+    hits = 0
+    for i, tok in enumerate(tokens):
+        polarity = 1 if tok in _POS else -1 if tok in _NEG else 0
+        if polarity == 0:
+            continue
+        window = set(tokens[max(0, i - 3) : i])
+        if window & negators:
+            polarity = -polarity
+        score += polarity
+        hits += 1
+    return score, hits
+
+
+def classify_sentiment(text: str) -> float:
+    """Return sentiment in [-1, 1] using a lexicon with a negation window.
+
+    Scored in two independent passes - multi-char/latin words, then CJK
+    characters - so that the unigrams inside a bigram cannot leak into its
+    negation window (e.g. the 不 in 不错 must not negate 不错 itself).
+    """
+    words = tokenize(text)
+    word_score, word_hits = _scan(words, _NEGATORS)
+    chars = [c for tok in words if _is_cjk_2(tok) for c in tok]
+    char_score, char_hits = _scan(chars, _NEGATORS)
+    score = word_score + char_score
+    hits = word_hits + char_hits
+    if hits == 0:
+        return 0.0
+    # Squash to [-1, 1]; more hits push further from neutral.
+    return math.tanh(score / math.sqrt(hits))
+
+
