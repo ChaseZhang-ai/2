@@ -40,3 +40,21 @@ _ASPECTS = {
 }
 
 
+def _is_cjk_2(tok: str) -> bool:
+    return len(tok) == 2 and all(ord(c) > 0x2E80 for c in tok)
+
+
+def _sentiment_tokens(text: str) -> list[str]:
+    """Latin words plus CJK bigrams *and* their constituent characters.
+
+    Bigrams let multi-character terms (不错/失望/破损) fire; the characters let
+    single-character polarity words (好/差/贵/快) fire. Used for aspect matching.
+    """
+    out: list[str] = []
+    for tok in tokenize(text):
+        out.append(tok)
+        if _is_cjk_2(tok):
+            out.extend(tok)
+    return out
+
+
