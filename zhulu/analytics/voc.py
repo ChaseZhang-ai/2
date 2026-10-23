@@ -93,3 +93,35 @@ def classify_sentiment(text: str) -> float:
     return math.tanh(score / math.sqrt(hits))
 
 
+@dataclass
+class AspectSummary:
+    aspect: str
+    mentions: int
+    mean_sentiment: float
+    examples: list[str] = field(default_factory=list)
+
+
+def summarize_voc(reviews: Iterable[str], top_examples: int = 3) -> list[AspectSummary]:
+    buckets: dict[str, list[float]] = defaultdict(list)
+    examples: dict[str, list[str]] = defaultdict(list)
+    for review in reviews:
+        toks = _sentiment_tokens(review)
+        aspects_in_review = {_ASPECTS[t] for t in toks if t in _ASPECTS}
+        if not aspects_in_review:
+            buckets["other"].append(classify_sentiment(review))
+            if len(examples["other"]) < top_examples:
+                examples["other"].append(review)
+            continue
+        s = classify_sentiment(review)
+        for aspect in aspects_in_review:
+            buckets[aspect].append(s)
+            if len(examples[aspect]) < top_examples:
+                examples[aspect].append(review)
+    out: list[AspectSummary] = []
+    for aspect, scores in buckets.items():
+        mean = sum(scores) / len(scores)
+        out.append(AspectSummary(aspect, len(scores), round(mean, 4), examples[aspect][:top_examples]))
+    out.sort(key=lambda a: (a.mean_sentiment, -a.mentions))
+    return out
+
+
