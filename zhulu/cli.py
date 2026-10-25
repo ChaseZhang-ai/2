@@ -69,3 +69,47 @@ def _cmd_schedule(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_dedup(args: argparse.Namespace) -> int:
+    from .dedup import NearDuplicateIndex, fingerprint
+
+    index = NearDuplicateIndex(radius=args.radius)
+    dupes = 0
+    for i, path in enumerate(args.images):
+        w, h, buf = _read_pgm(path)
+        fp = fingerprint(buf, w, h)
+        matches = index.query(fp)
+        if matches:
+            dupes += 1
+            print(f"{path}: duplicate of {matches[0].asset_id} (d={matches[0].distance})")
+        else:
+            index.add(f"img{i}", fp)
+    print(f"indexed={len(index)} duplicates={dupes}")
+    return 0
+
+
+def _read_pgm(path: str) -> tuple[int, int, list[int]]:
+    with open(path, "rb") as fh:
+        data = fh.read()
+    # Minimal binary PGM (P5) reader.
+    tokens: list[bytes] = []
+    i = 0
+    while len(tokens) < 4:
+        while i < len(data) and data[i : i + 1].isspace():
+            i += 1
+        if data[i : i + 1] == b"#":
+            while i < len(data) and data[i : i + 1] != b"\n":
+                i += 1
+            continue
+        start = i
+        while i < len(data) and not data[i : i + 1].isspace():
+            i += 1
+        tokens.append(data[start:i])
+    assert tokens[0] == b"P5", f"{path}: not a P5 PGM"
+    w, h, maxval = int(tokens[1]), int(tokens[2]), int(tokens[3])
+    i += 1
+    pixels = list(data[i : i + w * h])
+    if maxval != 255:
+        pixels = [p * 255 // maxval for p in pixels]
+    return w, h, pixels
+
+
