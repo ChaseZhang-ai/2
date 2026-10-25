@@ -113,3 +113,39 @@ def _read_pgm(path: str) -> tuple[int, int, list[int]]:
     return w, h, pixels
 
 
+def _cmd_voc(args: argparse.Namespace) -> int:
+    from .analytics import summarize_voc
+
+    with open(args.reviews) as fh:
+        reviews = [line.strip() for line in fh if line.strip()]
+    for s in summarize_voc(reviews):
+        print(f"{s.aspect:10s} mentions={s.mentions:3d} mean={s.mean_sentiment:+.2f}")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="zhulu", description="ZhuluAI engine CLI")
+    p.add_argument("--version", action="version", version=f"zhulu {__version__}")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    sp = sub.add_parser("plan", help="build a generation workflow and print its signature")
+    sp.add_argument("tier", choices=["model_image", "video"])
+    sp.add_argument("--input", default="product.png")
+    sp.add_argument("--seed", type=int, default=0)
+    sp.set_defaults(func=_cmd_plan)
+
+    ss = sub.add_parser("schedule", help="print a batching plan for a jobs file")
+    ss.add_argument("jobs")
+    ss.set_defaults(func=_cmd_schedule)
+
+    sd = sub.add_parser("dedup", help="report near-duplicate PGM images")
+    sd.add_argument("images", nargs="+")
+    sd.add_argument("--radius", type=int, default=6)
+    sd.set_defaults(func=_cmd_dedup)
+
+    sv = sub.add_parser("voc", help="summarise reviews (one per line)")
+    sv.add_argument("reviews")
+    sv.set_defaults(func=_cmd_voc)
+    return p
+
+
