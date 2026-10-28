@@ -38,3 +38,33 @@ class TestHashes(unittest.TestCase):
         self.assertLess(phash(img, 32, 32), 1 << 64)
 
 
+class TestBKTree(unittest.TestCase):
+    def test_exact_and_radius_search(self):
+        tree = BKTree()
+        for k in (0b0000, 0b1111, 0b1110):
+            tree.add(k)
+        assert tree.search(0b1111, 0) == [(0b1111, 0)]
+        found = {k for k, _ in tree.search(0b1111, 1)}
+        self.assertEqual(found, {0b1111, 0b1110})
+
+
+class TestNearDuplicateIndex(unittest.TestCase):
+    def test_exact_duplicate_detected(self):
+        idx = NearDuplicateIndex(radius=6)
+        img = gradient()
+        idx.add("a", fingerprint(img, 32, 32))
+        matches = idx.query(fingerprint(img, 32, 32))
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].asset_id, "a")
+        self.assertEqual(matches[0].distance, 0)
+
+    def test_crop_is_near_duplicate(self):
+        idx = NearDuplicateIndex(radius=12)
+        full = [((x * 3 + y) % 256) for y in range(24) for x in range(24)]
+        idx.add("full", fingerprint(full, 24, 24))
+        # Take an inner crop and resize conceptually by re-fingerprinting.
+        crop = [((x * 3 + y) % 256) for y in range(4, 22) for x in range(4, 22)]
+        fp_crop = fingerprint(crop, 18, 18)
+        self.assertTrue(idx.query(fp_crop))
+
+
