@@ -68,3 +68,22 @@ class TestNearDuplicateIndex(unittest.TestCase):
         self.assertTrue(idx.query(fp_crop))
 
 
+class TestSemanticDedup(unittest.TestCase):
+    def test_rejects_similar_accepts_diverse(self):
+        s = SemanticDedup(threshold=0.9)
+        self.assertTrue(s.accept("a", [1.0, 0.0, 0.0]))
+        self.assertFalse(s.accept("b", [0.99, 0.01, 0.0]))
+        self.assertTrue(s.accept("c", [0.0, 1.0, 0.0]))
+
+    def test_select_returns_diverse_subset(self):
+        s = SemanticDedup(threshold=0.95)
+        kept = s.select([
+            ("a", [1.0, 0.0]),
+            ("b", [0.999, 0.001]),
+            ("c", [0.0, 1.0]),
+        ])
+        self.assertEqual(kept, ["a", "c"])
+
+
+if __name__ == "__main__":
+    unittest.main()
