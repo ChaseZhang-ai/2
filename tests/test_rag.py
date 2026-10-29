@@ -40,3 +40,32 @@ class TestRRF(unittest.TestCase):
         self.assertIn("d", ids)
 
 
+def fake_embed(text: str):
+    # Deterministic tiny embedding: char-bag hashed into 8 dims.
+    v = [0.0] * 8
+    for ch in text.lower():
+        if ch.isalnum():
+            v[ord(ch) % 8] += 1.0
+    return v
+
+
+class TestHybridRetriever(unittest.TestCase):
+    def setUp(self):
+        self.r = HybridRetriever(embed=fake_embed)
+        self.r.add_all([
+            Document("k1", "warranty covers defects for 24 months"),
+            Document("k2", "shipping takes 3-5 business days"),
+            Document("k3", "refunds are processed within 7 days"),
+        ])
+
+    def test_hybrid_finds_relevant(self):
+        hits = self.r.search("warranty duration", top_k=1)
+        self.assertEqual(hits[0][0].doc_id, "k1")
+
+    def test_dense_only_still_returns(self):
+        r = HybridRetriever(embed=fake_embed)
+        r.add_all([Document("k1", "warranty"), Document("k2", "shipping")])
+        hits = r.search("shipping", top_k=1)
+        self.assertTrue(hits)
+
+
