@@ -69,3 +69,24 @@ class TestHybridRetriever(unittest.TestCase):
         self.assertTrue(hits)
 
 
+class TestLanguageAndAgent(unittest.TestCase):
+    def test_detect_language(self):
+        self.assertEqual(detect_language("你好，请问保修期是多久？"), "zh")
+        self.assertEqual(detect_language("How long is the warranty?"), "en")
+        self.assertEqual(detect_language("保証期間はどのくらいですか？"), "ja")
+        self.assertEqual(detect_language("보증 기간은 얼마나 되나요?"), "ko")
+
+    def test_agent_answers_and_escalates(self):
+        r = HybridRetriever(embed=fake_embed)
+        r.add_all([Document("k1", "warranty covers defects for 24 months")])
+        agent = CustomerServiceAgent(retriever=r, min_score=0.001)
+        a = agent.answer("warranty")
+        self.assertFalse(a.escalated)
+        self.assertEqual(a.sources, ["k1"])
+        # Unrelated query with a high bar -> escalate.
+        strict = CustomerServiceAgent(retriever=r, min_score=10.0)
+        self.assertTrue(strict.answer("warranty").escalated)
+
+
+if __name__ == "__main__":
+    unittest.main()
