@@ -60,3 +60,10 @@ share only the data plane.
 - **Every external effect carries an idempotency key** (`workflow/dag.py`), so a
   retried workflow does not double-post a ticket or double-sync a record.
 
+## Why batched, not streamed
+
+Streaming each request as it arrives keeps latency low for one user and destroys
+throughput for the system: per-job model loading dominates. The scheduler trades a
+little latency for a 3.35× throughput gain, which is the whole economic argument
+for the product. Latency-sensitive requests (operator previews) are protected by
+the priority class rather than by abandoning batching.
