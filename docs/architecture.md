@@ -50,3 +50,13 @@ shipped product; the GPU work has to live wherever the card is.
 The support and workflow products run independently of the generation path: they
 share only the data plane.
 
+## Key invariants
+
+- **The graph format is ComfyUI's.** `WorkflowGraph.to_comfy()` /
+  `from_comfy()` round-trip losslessly (unit-tested). We did not invent a new
+  format; we added a *signature* and a *VRAM estimate* on top.
+- **The control plane never imports torch.** Generation modules only construct
+  dicts. This is what makes CI runnable without a GPU.
+- **Every external effect carries an idempotency key** (`workflow/dag.py`), so a
+  retried workflow does not double-post a ticket or double-sync a record.
+
