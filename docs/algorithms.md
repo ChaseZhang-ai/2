@@ -47,3 +47,41 @@ denoise_schedule(28)  # 0.85 → 0.35 over the first ~9 steps, then flat 0.35
 
 ---
 
+## 2. Cost-aware batching scheduler
+
+`zhulu/scheduler/queue.py`
+
+**Problem.** Max GPU utilisation on one card, with interactive requests that must
+not wait behind a bulk backfill.
+
+**Key observation.** Cost per asset is dominated by *model loading*, not sampling.
+A 1024px FLUX image is ~1.4 s of sampling but ~8 s of checkpoint load. Requests
+that share loaded weights should share a load.
+
+**Shipped approach.**
+
+1. **Signature batching.** `WorkflowGraph.signature()` hashes the graph with
+   volatile fields (`prompt`, `seed`, `schedule`, `filename_prefix`, connected
+   links) reduced to placeholders. Two requests that differ only in wording or
+   seed produce the same signature and therefore land in the same batch.
+   Unit-tested: `test_signature_ignores_seed_and_prompt`.
+
+2. **First-fit packing under a VRAM budget.** Jobs are packed in priority order
+   into batches whose summed resident memory fits the card minus a safety margin,
+   capped at `max_batch_size`. A job larger than the budget is rejected at plan
+   time rather than failing on the GPU.
+
+3. **Ageing priority.** Ordering key is `(effective_priority, deadline, seq)` where
+   `effective_priority = priority − min(age_bonus, 2)` and `age_bonus` grows with
+   waiting time. Without ageing, a continuous stream of interactive jobs starves
+   backfill forever.
+
+**Result** (96 mixed jobs, one card): 9 batches, 3.35× fewer wall seconds than
+per-job execution (`examples/bench_numbers.py`).
+
+**What we did not do.** No ML-based job duration prediction. Estimated durations
+are constants per workflow class; a real system would learn them. This is
+acknowledged as a limitation, not hidden.
+
+---
+
