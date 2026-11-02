@@ -134,3 +134,35 @@ itself is model-agnostic and tested with a synthetic embedding.
 
 ---
 
+## 4. Hybrid multilingual retrieval
+
+`zhulu/rag/`
+
+**Problem.** Answer customer questions in the merchant's own words, in eight
+languages (zh/en/ja/ko + latin), fast, cheap, and *without* hallucinating policy.
+
+**Why not dense-only.** Product/FAQ corpora are full of rare literal tokens —
+model numbers, SKUs, part names — that a dense retriever blurs away. Lexical
+matching is often *more* precise for exactly these.
+
+**Why not BM25-only.** Paraphrase ("how do I send it back" vs. "return
+procedure") needs semantics.
+
+**Shipped approach — hybrid with RRF.**
+
+1. **Tokenizer.** Latin words as-is; CJK as overlapping bigrams. Bigrams give CJK
+   the "phrase-ish" signal spaces give Latin, without a segmentation dictionary
+   (which would be a dependency and a failure mode). Unit-tested on zh/en/ja/ko.
+2. **Lexical.** BM25 (k1=1.5, b=0.75) with the BM25+ idf form so idf stays
+   positive for ultra-common terms.
+3. **Dense.** Cosine similarity over caller-supplied embeddings.
+4. **Fusion.** **Reciprocal Rank Fusion** — `score(d) = Σ 1/(k + rank_r(d))`,
+   k=60. RRF is used *instead of score normalisation* because BM25 scores and
+   cosine similarities are on incomparable scales and their distributions shift
+   per language and per tenant. RRF only needs ranks, so one config works for a
+   Chinese FAQ and an English part lookup with no per-tenant tuning.
+
+**Grounded answering with abstention.** If the top fused score is below
+`min_score`, the agent **escalates to a human** and emits a `open_ticket` action
+rather than generating a plausible-but-wrong answer. For B2B support, refusing to
+answer is correct behaviour, and it is the default, not an afterthought.
