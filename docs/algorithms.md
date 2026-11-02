@@ -85,3 +85,52 @@ acknowledged as a limitation, not hidden.
 
 ---
 
+## 3. Perceptual + semantic de-duplication
+
+`zhulu/dedup/`
+
+**Problem.** A generative pipeline emits hundreds of near-identical assets from
+one product photo. Short-video platforms de-rank near-duplicate uploads
+(dedup / limit reach), and viewers tune out.
+
+**Two layers, different jobs.**
+
+### Layer 1 — visual near-duplicates (O(1)-ish, exact-ish)
+
+Three 64-bit perceptual hashes per asset:
+- `ahash` — average hash (global luminance).
+- `dhash` — difference hash (right-neighbour comparison; robust to brightness and
+  gamma, which matter for re-encoded copies).
+- `phash` — DCT-based, keeps the top-left 8×8 of a 32×32 DCT, median-thresholded
+  with the DC term dropped. Used for resolution-changed re-renders.
+
+All three are **hand-rolled pure Python** (no OpenCV / torch) because the check
+runs on the CPU control node for every generated asset. The DCT basis is
+precomputed once.
+
+**Indexing.** Naive dedup is O(n²) against the whole campaign history. We index
+each hash in a **BK-tree** (Burkhard-Keller tree) so a "everything within hamming
+distance ≤ r" query visits only the branches whose edge distance is within
+`[d−r, d+r]`. A candidate must clear *all three* hashes (max-distance rule).
+
+Threshold `r = 6` on 64-bit hashes: empirically catches truncated / re-encoded
+copies while leaving intentionally varied shots alone. Tunable via
+`NearDuplicateIndex(radius=...)`.
+
+### Layer 2 — semantic near-duplicates (needs embeddings)
+
+Visual diversity is not enough: the same talking points rendered as visibly
+different clips still repeat. `SemanticDedup` keeps a centroid per content angle
+and runs a **greedy max-coverage selection**: accept a candidate only if its
+cosine similarity to every already-accepted embedding is below threshold, i.e. it
+adds a new angle.
+
+**Result.** On 500 candidates drawn from 8 true content angles, the gate recovers
+exactly 8 (`examples/bench_numbers.py`).
+
+**Honest caveat.** Layer 2's quality is bounded by the embedding model, which is
+injected by the caller (real deployments used a CLIP text encoder). The index
+itself is model-agnostic and tested with a synthetic embedding.
+
+---
+
