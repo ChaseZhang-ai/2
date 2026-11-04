@@ -40,3 +40,18 @@ a prompting problem.
 
 ---
 
+## vs. off-the-shelf orchestration (Airflow / Temporal / n8n)
+
+For the B-end workflow product, we evaluated and rejected these for on-prem SMB
+deployments:
+
+- They require a **control plane the customer's IT will not run**.
+- Their retry/scheduling model is heavier than the flows actually needed
+  (approval chains, ticket routing, ETL).
+
+So `workflow/` is a ~200-line DAG engine with the three properties that mattered:
+concurrent independent nodes, jittered exponential-backoff retries, and
+idempotency keys — small enough to ship *inside* the delivered product.
+
+---
+
