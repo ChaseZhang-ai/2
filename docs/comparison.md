@@ -22,3 +22,21 @@ and GPU production cost is a *fixed amortised rate*. Batched scheduling
 
 ---
 
+## vs. "AI video generator" tools (template / one-shot generators)
+
+The category the company was actually grouped with. The differences are concrete:
+
+| Failure of the template approach | What this engine does |
+|---|---|
+| **Template collapse** — every clip looks the same, output is throttled as duplicate | Perceptual BK-tree dedup **+** semantic angle diversity (`dedup/`) |
+| **No cost control** — each request reloads the model | Signature batching, ~8 s load amortised over a batch (`scheduler/`) |
+| **Generic LLM support bot hallucinates** | Retrieved answers from the merchant's corpus with an **abstention gate** that escalates (`rag/`) |
+| **Metrics stop at play/like counts** | Full-funnel attribution back to each asset (`analytics/roi.py`) |
+| **Product identity drifts** in generated shots | Dual control (depth **+** pose) with scheduled denoise (`generation/model_image.py`) |
+
+The last row is the one customers noticed: competitors' model shots changed the
+product's logo and label text; keeping identity is a *conditioning* problem, not
+a prompting problem.
+
+---
+
