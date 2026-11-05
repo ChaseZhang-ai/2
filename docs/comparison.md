@@ -71,3 +71,9 @@ control-conditioned generation graph.
 
 ---
 
+## A note on sourcing
+
+The product/market framing (market size, competitor fundraising, customer lists)
+comes from the company's 2025 business plan and is deliberately kept out of this
+README except for the traction paragraph above. The technical content — cost
+model, batching, dedup, retrieval — is all reproduced by code in this repo.
