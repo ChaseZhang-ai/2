@@ -55,3 +55,19 @@ idempotency keys — small enough to ship *inside* the delivered product.
 
 ---
 
+## Context: business traction (facts about the company, not this repo)
+
+Included for application context and clearly marked as **not** demonstrated by
+this code:
+
+- 2025 pilot with **nine signed merchants** (e-commerce, fitness equipment,
+  food & beverage) across content operations and software procurement.
+- Roughly **¥50 k** in signed orders at the time of the April 2025 plan.
+- Deployed on a **single RTX 4090** plus ~¥80 k of fixed investment.
+
+These are company facts. What this repository demonstrates is the engineering:
+the scheduler, the dedup index, the hybrid retriever, the DAG engine and the
+control-conditioned generation graph.
+
+---
+
