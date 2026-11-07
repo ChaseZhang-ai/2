@@ -60,3 +60,50 @@ def synth_image(seed: int, w: int = 32, h: int = 32) -> list[int]:
     return out
 
 
+def bench_scheduler(n_jobs: int = 96) -> dict:
+    sched = CostAwareScheduler(vram_budget_mb=24576, max_batch_size=16)
+    for i in range(n_jobs):
+        video = (i % 3 == 0)
+        sched.submit(Job(
+            job_id=f"j{i}",
+            workflow_signature="wan_video" if video else "flux_model_image",
+            vram_mb=2600 if video else 1800,
+            est_seconds=4.2 if video else 1.4,
+        ))
+    plan = sched.plan()
+    pool = WorkerPool(vram_budget_mb=24576)
+    result = pool.run(plan.batches)
+    return {
+        "jobs": plan.total_jobs,
+        "batches": len(plan.batches),
+        "model_loads": result.model_loads,
+        "batched_seconds": round(plan.makespan_seconds, 1),
+        "unbatched_seconds": round(plan.single_job_makespan_seconds, 1),
+        "speedup": round(plan.speedup, 2),
+    }
+
+
+def bench_dedup(n_images: int = 2000, duplicate_rate: float = 0.3) -> dict:
+    idx = NearDuplicateIndex(radius=6)
+    t0 = time.perf_counter()
+    dupes = 0
+    for i in range(n_images):
+        is_dup = (i % 10) < 10 * duplicate_rate
+        seed = (i // 4) if is_dup else i
+        img = synth_image(seed)
+        fp = fingerprint(img, 32, 32)
+        matches = idx.query(fp)
+        if matches:
+            dupes += 1
+        else:
+            idx.add(f"img{i}", fp)
+    dt = time.perf_counter() - t0
+    return {
+        "indexed": len(idx),
+        "flagged_duplicates": dupes,
+        "duplicate_rate": duplicate_rate,
+        "seconds": round(dt, 3),
+        "per_1000_images_ms": round(dt / n_images * 1000 * 1000, 2),
+    }
+
+
