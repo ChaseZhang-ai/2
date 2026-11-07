@@ -75,3 +75,19 @@ These match the figures quoted to customers during the 2025 pilot.
 
 ---
 
+## Caveats (read before quoting)
+
+1. **Measured vs. modelled.** Scheduler wall-times and GPU costs are *modelled*
+   from per-class constants and 2025 market rates; dedup and RAG timings are
+   *measured*. Do not present the two as a single measured result.
+2. **Synthetic dedup corpus.** The 2 000-image dedup corpus is synthetic, chosen
+   to isolate index behaviour. Precision on real near-duplicates (crops,
+   re-encodes, colour-graded variants) was validated qualitatively during the
+   pilot but is not quantified here.
+3. **Small scale.** One GPU, tens of merchants, thousands of assets. Not
+   stress-tested at thousands of concurrent jobs.
+4. **Quality is not measured here.** Model-shot and digital-human *quality* was
+   judged by customers and by eye. There is no FID / LSE-D number in this repo
+   because the pilot did not collect one — the `lip_sync_gate` exists and is
+   unit-tested, but its thresholds are engineering defaults, not tuned on a
+   labelled set.
