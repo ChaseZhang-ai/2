@@ -107,3 +107,36 @@ def bench_dedup(n_images: int = 2000, duplicate_rate: float = 0.3) -> dict:
     }
 
 
+def bench_semantic(n: int = 500, n_angles: int = 8) -> dict:
+    sem = SemanticDedup(threshold=0.95)
+    kept = 0
+    for i in range(n):
+        angle = 2 * math.pi * (i % n_angles) / n_angles
+        jitter = 0.02 * math.sin(i)
+        v = [math.cos(angle + jitter), math.sin(angle + jitter)]
+        if sem.accept(f"a{i}", v):
+            kept += 1
+    return {"candidates": n, "true_angles": n_angles, "distinct_kept": kept}
+
+
+def cost_model(images_per_hour: int, minutes_video_per_hour: int) -> dict:
+    gpu_per_image = GPU_HOURLY_CNY / images_per_hour
+    gpu_per_video_min = GPU_HOURLY_CNY / minutes_video_per_hour
+    return {
+        "gpu_cny_per_hour": GPU_HOURLY_CNY,
+        "image_cny_each": round(gpu_per_image, 4),
+        "image_saving_pct": round(100 * (1 - gpu_per_image / STUDIO_IMAGE_CNY), 2),
+        "video_cny_per_min": round(gpu_per_video_min, 4),
+        "video_saving_pct": round(100 * (1 - gpu_per_video_min / STUDIO_VIDEO_CNY_PER_MIN), 2),
+    }
+
+
+if __name__ == "__main__":
+    out = {
+        "scheduler": bench_scheduler(),
+        "dedup": bench_dedup(),
+        "semantic": bench_semantic(),
+        "cost_model_20img_6min_per_hour": cost_model(20, 6),
+    }
+    json.dump(out, sys.stdout, indent=2, ensure_ascii=False)
+    print()
