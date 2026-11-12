@@ -1,0 +1,15 @@
+{
+  "vram_budget_mb": 24576,
+  "jobs": [
+    {"id": "img-001", "signature": "flux_model_image", "vram_mb": 1800, "priority": "INTERACTIVE", "est_seconds": 1.4},
+    {"id": "img-002", "signature": "flux_model_image", "vram_mb": 1800, "priority": "CAMPAIGN", "est_seconds": 1.4},
+    {"id": "img-003", "signature": "flux_model_image", "vram_mb": 1800, "priority": "CAMPAIGN", "est_seconds": 1.4},
+    {"id": "img-004", "signature": "flux_model_image", "vram_mb": 1800, "priority": "CAMPAIGN", "est_seconds": 1.4},
+    {"id": "img-005", "signature": "flux_model_image", "vram_mb": 1800, "priority": "BACKFILL", "est_seconds": 1.4},
+    {"id": "img-006", "signature": "flux_model_image", "vram_mb": 1800, "priority": "BACKFILL", "est_seconds": 1.4},
+    {"id": "vid-001", "signature": "wan_video", "vram_mb": 2600, "priority": "CAMPAIGN", "est_seconds": 4.2},
+    {"id": "vid-002", "signature": "wan_video", "vram_mb": 2600, "priority": "CAMPAIGN", "est_seconds": 4.2},
+    {"id": "vid-003", "signature": "wan_video", "vram_mb": 2600, "priority": "BACKFILL", "est_seconds": 4.2},
+    {"id": "dh-001", "signature": "digital_human", "vram_mb": 3200, "priority": "INTERACTIVE", "est_seconds": 6.0}
+  ]
+}
