@@ -11,3 +11,15 @@ PYTHONPATH=. python examples/bench_numbers.py
 make cli                                   # exercise every CLI subcommand
 ```
 
+## Ground rules
+
+- **No new runtime dependencies in `zhulu/`.** The core ships as zero-dependency
+  pure Python on purpose (on-prem delivery). Optional heavy deps belong behind a
+  caller-injected function (see how embeddings are passed to `HybridRetriever`).
+- **Anything measured has a script.** If you change a benchmark number, change
+  `examples/bench_numbers.py` and the docs together. Do not hand-edit results.
+- **Keep the ComfyUI round-trip lossless.** `WorkflowGraph.to_comfy()` /
+  `from_comfy()` must stay exact; there is a unit test.
+- **Refusing to answer is correct.** Do not weaken the RAG abstention gate to make
+  the demo look better.
+
