@@ -23,3 +23,11 @@ make cli                                   # exercise every CLI subcommand
 - **Refusing to answer is correct.** Do not weaken the RAG abstention gate to make
   the demo look better.
 
+## Adding a workflow
+
+1. Build the graph in `zhulu/generation/<name>.py` using `WorkflowGraph`.
+2. Make sure `signature()` collapses requests that differ only in prompt/seed
+   (add volatile keys to `_VOLATILE_KEYS` in `generation/graph.py` if needed).
+3. Declare a realistic `vram_mb` per node in the node `meta`.
+4. Add a test asserting it is a DAG and that the signature behaves.
+
