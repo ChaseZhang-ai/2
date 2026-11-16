@@ -32,3 +32,19 @@ differs from "just another AI video generator" and from a traditional MCN.
 
 ---
 
+## Contents
+
+- [What it does](#what-it-does)
+- [Results](#results)
+- [Why the naive approach does not work](#why-the-naive-approach-does-not-work)
+- [Architecture](#architecture)
+- [What is interesting here, technically](#what-is-interesting-here-technically)
+- [Repository layout](#repository-layout)
+- [Quickstart](#quickstart)
+- [Benchmarks](#benchmarks)
+- [Design notes](#design-notes)
+- [Honest limitations](#honest-limitations)
+- [License](#license)
+
+---
+
