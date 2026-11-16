@@ -48,3 +48,20 @@ differs from "just another AI video generator" and from a traditional MCN.
 
 ---
 
+## What it does
+
+Three products, one engine:
+
+| Product | Input | Output | Replaces |
+|---|---|---|---|
+| **Model-shot generation** | product photo | worn/used model image | commercial photo shoot (100 CNY/shot) |
+| **Marketing video** | product photo | 7–15 s b-roll clip | videographer + editor (14 CNY/min) |
+| **Digital human** | portrait + script | lip-synced talking head | presenter + studio |
+| **Multilingual support** | customer message | grounded answer / human hand-off | first-line support agent |
+| **Enterprise workflows** | business event | approvals, ticket routing, data sync | manual ops |
+
+The engine is a *control plane*: it builds ComfyUI-compatible workflow graphs,
+schedules them onto a single GPU, rejects redundant output, and runs the
+non-generative automation. GPU sampling itself happens inside ComfyUI; nothing
+here loads a diffusion model.
+
