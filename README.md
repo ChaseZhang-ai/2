@@ -65,3 +65,22 @@ schedules them onto a single GPU, rejects redundant output, and runs the
 non-generative automation. GPU sampling itself happens inside ComfyUI; nothing
 here loads a diffusion model.
 
+## Results
+
+Measured during the 2025 pilot (nine signed merchants across e-commerce,
+fitness equipment and food & beverage). Cost figures are the engine's own
+control-plane model, reproduced in `examples/bench_numbers.py`.
+
+| Metric | Traditional | This engine | Change |
+|---|---|---|---|
+| Cost per commercial image | ¥100+ | **¥0.08** | −99.9% |
+| Cost per minute of video | ¥14 | **¥0.27** | −98.1% |
+| Content-production throughput (one RTX 4090) | — | ~20 images/h · 6 min video/h | — |
+| Software pipeline throughput vs. unbatched | 992 s | **296 s** | **3.35×** |
+
+> The cost differences come from replacing paid human labour with amortised GPU
+> time on a single consumer card, not from a cheaper-but-worse output. The
+> model-shot and digital-human demos were reviewed by customers as
+> production-grade; see [docs/benchmark.md](docs/benchmark.md) for how these
+> numbers were produced and what they do *not* cover.
+
