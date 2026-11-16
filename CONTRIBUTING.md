@@ -31,3 +31,9 @@ make cli                                   # exercise every CLI subcommand
 3. Declare a realistic `vram_mb` per node in the node `meta`.
 4. Add a test asserting it is a DAG and that the signature behaves.
 
+## Pull requests
+
+- One logical change per PR.
+- Tests must pass on 3.9 and 3.11.
+- If you are correcting a factual claim in the docs, say which measurement you
+  re-ran.
