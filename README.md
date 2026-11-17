@@ -103,3 +103,34 @@ three failure modes we had to actually solve:
    with an abstention gate that escalates to a human — see
    [the RAG service](zhulu/rag/service.py).
 
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Control plane (this repo, CPU)
+        A[Merchant request] --> B[Workflow builder]
+        B --> C[Cost-aware scheduler]
+        C --> D[Dedup gate]
+        E[RAG service] 
+        F[Workflow engine]
+    end
+    subgraph GPU plane
+        G[ComfyUI server<br/>FLUX · Wan 2.1 · talking-head]
+    end
+    subgraph Data plane
+        H[(Knowledge base)]
+        I[(Campaign metrics)]
+    end
+    C -->|batched graphs| G
+    G -->|assets| D
+    D -->|approved| J[Publish queue]
+    E --> H
+    A --> F
+    F --> I
+    D --> I
+```
+
+The control plane has **zero runtime dependencies** and runs on the CPU node; the
+GPU node runs stock ComfyUI. The two communicate over ComfyUI's HTTP API using the
+same graph JSON this repo produces (`WorkflowGraph.to_comfy()` round-trips it).
+
