@@ -84,3 +84,22 @@ control-plane model, reproduced in `examples/bench_numbers.py`.
 > production-grade; see [docs/benchmark.md](docs/benchmark.md) for how these
 > numbers were produced and what they do *not* cover.
 
+## Why the naive approach does not work
+
+Wrapping the FLUX / Wan 2.1 APIs in a `for` loop is a weekend project, and it
+produces output that platforms throttle and viewers ignore within a week. The
+three failure modes we had to actually solve:
+
+1. **Cost per asset is dominated by model loading, not sampling.** A 1024px FLUX
+   image is ~1.4 s of sampling but an ~8 s checkpoint load if every request is
+   its own job. Saturation requires batching requests that share loaded weights —
+   see [the scheduler](zhulu/scheduler/queue.py).
+2. **Platforms de-rank near-duplicate uploads.** Generating 300 clips from one
+   product photo trips the dedup filter. Output must be *visually* and
+   *semantically* diverse, cheaply verified before publishing — see
+   [the dedup layer](zhulu/dedup/).
+3. **A generic LLM support bot hallucinates policy.** For B2B, refusing to answer
+   is correct behaviour. Answers must be grounded in the merchant's own corpus,
+   with an abstention gate that escalates to a human — see
+   [the RAG service](zhulu/rag/service.py).
+
