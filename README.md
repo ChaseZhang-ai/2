@@ -134,3 +134,32 @@ The control plane has **zero runtime dependencies** and runs on the CPU node; th
 GPU node runs stock ComfyUI. The two communicate over ComfyUI's HTTP API using the
 same graph JSON this repo produces (`WorkflowGraph.to_comfy()` round-trips it).
 
+## What is interesting here, technically
+
+Each of these is a real design decision with a reason, documented in code:
+
+- **Workflow signature for batching** (`generation/graph.py`). Graphs are hashed
+  with volatile fields (prompt, seed, schedule) stripped, so two requests that
+  differ only in wording collapse to the same signature and share a weight load.
+  This is what turns an 8 s load into an amortised cost.
+- **VRAM-constrained packing + ageing priority** (`scheduler/queue.py`). First-fit
+  packing into batches under a memory budget, ordered by `(priority, deadline)`
+  with an ageing term so bulk backfill cannot starve behind interactive previews.
+- **Perceptual near-duplicate index** (`dedup/`). Hand-rolled DCT `phash` + average
+  and difference hashes, indexed with a **BK-tree** per hash so "everything within
+  hamming distance ≤ 6" is sub-linear. Pure Python, no OpenCV — it runs on the
+  control node for every asset.
+- **Semantic diversity gate** (`dedup/semantic.py`). A greedy max-coverage
+  selection over content-embedding centroids, so the *meaning* of the output, not
+  just its pixels, stays diverse.
+- **Hybrid multilingual retrieval with RRF** (`rag/`). BM25 over a CJK-bigram
+  tokenizer fused with dense retrieval by Reciprocal Rank Fusion, because scores
+  from the two retrievers are not comparable and their distributions shift per
+  language and per tenant.
+- **Grounded answering with abstention** (`rag/service.py`). A confidence gate
+  escalates to a human instead of letting the model invent policy.
+- **Dependency-free DAG engine** (`workflow/`). Topological execution with
+  concurrent independent nodes, per-node retry with jittered exponential backoff,
+  conditional edges, and idempotency keys — small enough to ship on-prem inside
+  the product.
+
