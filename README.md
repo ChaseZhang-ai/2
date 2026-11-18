@@ -163,3 +163,18 @@ Each of these is a real design decision with a reason, documented in code:
   conditional edges, and idempotency keys — small enough to ship on-prem inside
   the product.
 
+## Repository layout
+
+```
+zhulu/
+  generation/   ComfyUI-compatible workflow graphs (model shot, video, digital human)
+  scheduler/    cost-aware batching scheduler + GPU worker-pool simulator
+  dedup/        perceptual hashing, BK-tree index, semantic diversity gate
+  rag/          BM25 + dense hybrid retriever, multilingual support agent
+  workflow/     dependency-free DAG engine + approval/routing/sync nodes
+  analytics/    voice-of-customer clustering, full-funnel ROI attribution
+docs/           architecture, algorithms, benchmarks, competitor comparison
+examples/       runnable demos + the script that reproduces the headline numbers
+tests/          42 unit tests, no third-party dependencies
+```
+
