@@ -178,3 +178,35 @@ examples/       runnable demos + the script that reproduces the headline numbers
 tests/          42 unit tests, no third-party dependencies
 ```
 
+## Quickstart
+
+No dependencies, Python 3.9+:
+
+```bash
+git clone https://github.com/zixinzenith/zhulu-ai
+cd zhulu-ai
+
+python -m unittest discover -s tests        # 42 tests
+PYTHONPATH=. python examples/bench_numbers.py
+
+# build a generation workflow and print its signature + VRAM estimate
+python -m zhulu plan model_image --input product.png
+python -m zhulu plan video
+
+# batch a queue of jobs and report the throughput speedup
+python -m zhulu schedule examples/configs/jobs.json
+
+# summarise customer reviews into aspect sentiment
+python -m zhulu voc examples/configs/reviews.txt
+```
+
+To actually generate assets you point the engine at a running ComfyUI server:
+
+```python
+from zhulu.generation import ModelImageRequest, build_model_image_graph
+
+graph = build_model_image_graph(ModelImageRequest(product_image="product.png", seed=7))
+payload = graph.to_comfy()          # POST this to /prompt on your ComfyUI server
+print(graph.signature(), graph.estimated_vram_mb())
+```
+
