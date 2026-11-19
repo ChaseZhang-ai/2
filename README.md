@@ -210,3 +210,17 @@ payload = graph.to_comfy()          # POST this to /prompt on your ComfyUI serve
 print(graph.signature(), graph.estimated_vram_mb())
 ```
 
+## Benchmarks
+
+`examples/bench_numbers.py` (CPU-only; measures the control plane, not GPU
+sampling):
+
+| Benchmark | Setup | Result |
+|---|---|---|
+| Scheduler batching | 96 mixed jobs, one RTX 4090 budget | 9 batches, 992 s → **296 s (3.35×)** |
+| Perceptual dedup | 2 000 images, 30% re-renders | 1 500 kept, **500/500 duplicates caught**, 2.87 ms/image |
+| Semantic dedup | 500 candidates from 8 content angles | **8/8 angles recovered** |
+| Cost model | 20 img/h + 6 min video/h on one 4090 | **¥0.0795/image, ¥0.265/min** |
+
+Full methodology and caveats in [docs/benchmark.md](docs/benchmark.md).
+
