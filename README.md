@@ -237,3 +237,17 @@ Full methodology and caveats in [docs/benchmark.md](docs/benchmark.md).
 - **Anything measured has a script.** Every number in this README is reproduced by
   `examples/bench_numbers.py`, not typed by hand.
 
+## Honest limitations
+
+- The GPU side runs on **stock ComfyUI**; this repo is the orchestration, not the
+  diffusion models. No model was trained here.
+- The numbers in [docs/benchmark.md](docs/benchmark.md) mix **measured**
+  control-plane timings with **modelled** GPU costs using 2025 market rates; the
+  two are labelled separately and should not be quoted as one measurement.
+- Business traction (nine signed merchants, ~¥50 k in orders) is a fact about the
+  company, not something this repository demonstrates. It is included for context
+  in [docs/comparison.md](docs/comparison.md) and is clearly marked as such.
+- The pilot ran at small scale: single GPU, tens of merchants. The scheduler and
+  dedup index have unit tests but have **not** been stress-tested at thousands of
+  concurrent jobs.
+
