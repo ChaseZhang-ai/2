@@ -224,3 +224,16 @@ sampling):
 
 Full methodology and caveats in [docs/benchmark.md](docs/benchmark.md).
 
+## Design notes
+
+- **Zero runtime dependencies for the core.** The control plane ships as pure
+  Python so it fits on-prem deployments where the customer's IT team will not run
+  a broker or a control-plane service. Docker Compose is *optional*.
+- **The generation modules do not load models.** They emit ComfyUI graph JSON.
+  This keeps model choice out of the engine and makes the whole thing testable in
+  CI without a GPU.
+- **Refusing to answer is a feature.** The support agent abstains and escalates
+  rather than guessing — see `min_score` in `rag/service.py`.
+- **Anything measured has a script.** Every number in this README is reproduced by
+  `examples/bench_numbers.py`, not typed by hand.
+
