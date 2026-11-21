@@ -251,3 +251,6 @@ Full methodology and caveats in [docs/benchmark.md](docs/benchmark.md).
   dedup index have unit tests but have **not** been stress-tested at thousands of
   concurrent jobs.
 
+## License
+
+MIT — see [LICENSE](LICENSE).
