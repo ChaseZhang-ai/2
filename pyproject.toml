@@ -4,6 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zhulu-ai"
-version = "0.1.0"
-requires-python = ">=3.9"
+version = "1.0.0"
+description = "Generative content-ops and enterprise-automation engine (open-sourced from the ZhuluAI startup)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Jia Zixin", email = "zixinzenith@gmail.com" }]
+keywords = ["generative-ai", "comfyui", "content-operations", "rag", "workflow-automation", "scheduler"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff>=0.4"]
+server = ["fastapi>=0.110", "uvicorn>=0.29"]
+
+[project.scripts]
+zhulu = "zhulu.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["zhulu*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
