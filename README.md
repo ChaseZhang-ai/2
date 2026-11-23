@@ -7,7 +7,7 @@
 [![CI](https://github.com/zixinzenith/zhulu-ai/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quickstart)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-42%20passing-brightgreen.svg)](tests)
+[![Tests](https://img.shields.io/badge/tests-52%20passing-brightgreen.svg)](tests)
 [![Dependencies](https://img.shields.io/badge/runtime%20deps-none-success.svg)](#design-notes)
 
 *Built in 2025, open-sourced in 2026.*
@@ -28,7 +28,9 @@ This repository is the engine behind **ZhuluAI (逐鹿 AI)**, a content-operatio
 startup I founded in 2025. The company is winding down its managed-service arm,
 so I am releasing the core engine: the parts that were genuinely hard, technical
 and worth showing. See [docs/comparison.md](docs/comparison.md) for how this
-differs from "just another AI video generator" and from a traditional MCN.
+differs from "just another AI video generator" and from a traditional MCN, and
+[docs/provenance.md](docs/provenance.md) for exactly how this repo was built,
+including what was AI-assisted.
 
 ---
 
@@ -43,6 +45,8 @@ differs from "just another AI video generator" and from a traditional MCN.
 - [Quickstart](#quickstart)
 - [Benchmarks](#benchmarks)
 - [Design notes](#design-notes)
+- [Roadmap](#roadmap)
+- [How this repository was built](#how-this-repository-was-built)
 - [Honest limitations](#honest-limitations)
 - [License](#license)
 
@@ -67,22 +71,24 @@ here loads a diffusion model.
 
 ## Results
 
-Measured during the 2025 pilot (nine signed merchants across e-commerce,
-fitness equipment and food & beverage). Cost figures are the engine's own
-control-plane model, reproduced in `examples/bench_numbers.py`.
+Two kinds of number appear below and are labelled separately: the pipeline
+figures are **measured** by `examples/bench_numbers.py`; the cost figures are
+**modelled** from the pilot's GPU rate (¥1.59/h on one RTX 4090) and the output
+it sustained. They are not the same kind of measurement.
 
-| Metric | Traditional | This engine | Change |
-|---|---|---|---|
-| Cost per commercial image | ¥100+ | **¥0.08** | −99.9% |
-| Cost per minute of video | ¥14 | **¥0.27** | −98.1% |
-| Content-production throughput (one RTX 4090) | — | ~20 images/h · 6 min video/h | — |
-| Software pipeline throughput vs. unbatched | 992 s | **296 s** | **3.35×** |
+| Metric | Baseline | This engine | Change | Basis |
+|---|---|---|---|---|
+| Cost per commercial image | ¥100+ | ¥0.08 | −99.9% | modelled |
+| Cost per minute of video | ¥14 | ¥0.27 | −98.1% | modelled |
+| Pipeline throughput vs. unbatched | 992 s | 296 s | 3.35× | measured (CPU) |
+| Near-duplicate detection | — | 500/500 injected | — | measured (synthetic) |
+| Image / video output on one 4090 | — | ~20 img/h · ~6 min/h | — | pilot observation |
 
-> The cost differences come from replacing paid human labour with amortised GPU
-> time on a single consumer card, not from a cheaper-but-worse output. The
-> model-shot and digital-human demos were reviewed by customers as
-> production-grade; see [docs/benchmark.md](docs/benchmark.md) for how these
-> numbers were produced and what they do *not* cover.
+> The cost gap comes from replacing paid human labour with amortised GPU time on
+> a single consumer card — not from a "cheaper but worse" trade. Whether the output
+> is *good enough* was a judgement made by the pilot's customers in 2025; this repo
+> contains no image- or video-quality metric, and
+> [docs/benchmark.md](docs/benchmark.md) says so explicitly.
 
 ## Why the naive approach does not work
 
@@ -152,6 +158,10 @@ Each of these is a real design decision with a reason, documented in code:
 - **Semantic diversity gate** (`dedup/semantic.py`). A greedy max-coverage
   selection over content-embedding centroids, so the *meaning* of the output, not
   just its pixels, stays diverse.
+- **Up-front angle planning** (`generation/angles.py`). Rejecting redundant assets
+  is expensive because they have already cost GPU time, so distinct marketing
+  angles are planned *before* generation; the planner is deterministic and caps
+  itself at the number of genuinely unique template × modifier combinations.
 - **Hybrid multilingual retrieval with RRF** (`rag/`). BM25 over a CJK-bigram
   tokenizer fused with dense retrieval by Reciprocal Rank Fusion, because scores
   from the two retrievers are not comparable and their distributions shift per
@@ -160,22 +170,22 @@ Each of these is a real design decision with a reason, documented in code:
   escalates to a human instead of letting the model invent policy.
 - **Dependency-free DAG engine** (`workflow/`). Topological execution with
   concurrent independent nodes, per-node retry with jittered exponential backoff,
-  conditional edges, and idempotency keys — small enough to ship on-prem inside
-  the product.
+  conditional edges, and idempotency keys — small enough to embed in the delivered
+  product.
 
 ## Repository layout
 
 ```
 zhulu/
-  generation/   ComfyUI-compatible workflow graphs (model shot, video, digital human)
+  generation/   ComfyUI-compatible workflow graphs + content-angle planner
   scheduler/    cost-aware batching scheduler + GPU worker-pool simulator
   dedup/        perceptual hashing, BK-tree index, semantic diversity gate
   rag/          BM25 + dense hybrid retriever, multilingual support agent
   workflow/     dependency-free DAG engine + approval/routing/sync nodes
   analytics/    voice-of-customer clustering, full-funnel ROI attribution
-docs/           architecture, algorithms, benchmarks, competitor comparison
+docs/           architecture, algorithms, benchmarks, provenance, rationale
 examples/       runnable demos + the script that reproduces the headline numbers
-tests/          42 unit tests, no third-party dependencies
+tests/          52 unit tests, no third-party dependencies
 ```
 
 ## Quickstart
@@ -186,7 +196,7 @@ No dependencies, Python 3.9+:
 git clone https://github.com/zixinzenith/zhulu-ai
 cd zhulu-ai
 
-python -m unittest discover -s tests        # 42 tests
+python -m unittest discover -s tests        # 52 tests
 PYTHONPATH=. python examples/bench_numbers.py
 
 # build a generation workflow and print its signature + VRAM estimate
@@ -198,6 +208,9 @@ python -m zhulu schedule examples/configs/jobs.json
 
 # summarise customer reviews into aspect sentiment
 python -m zhulu voc examples/configs/reviews.txt
+
+# plan a diverse batch of content angles before spending GPU time
+python -m zhulu angles "ceramic mug" -n 6
 ```
 
 To actually generate assets you point the engine at a running ComfyUI server:
@@ -237,6 +250,36 @@ Full methodology and caveats in [docs/benchmark.md](docs/benchmark.md).
 - **Anything measured has a script.** Every number in this README is reproduced by
   `examples/bench_numbers.py`, not typed by hand.
 
+## Roadmap
+
+Honest list of what is **not** done yet. Items marked done were implemented after
+the initial release and are covered by tests.
+
+- [x] **Content-angle planner** — plan diverse prompts before generation, capped at
+  the number of unique template × modifier combinations (`generation/angles.py`,
+  `zhulu angles`).
+- [ ] **Learned batch durations** — the scheduler currently uses per-workflow-class
+  constants for `est_seconds`; fit them from observed runs.
+- [ ] **Persistent dedup index** — the near-duplicate index is in-memory, so a
+  campaign that spans sessions rebuilds it from scratch.
+- [ ] **Real embedding backend in the RAG service** — the retriever takes an
+  injectable encoder; there is no bundled CLIP/text encoder.
+- [ ] **Stress tests** — concurrency limits and index behaviour at 10⁴+ assets are
+  untested.
+
+## How this repository was built
+
+The short version: the system was **designed and operated in 2025**; this repo is
+the **2026 rewrite** prepared for release, and its implementation was **drafted
+with AI assistance and then reviewed, run and corrected by me**. The tests and
+benchmarks are how I check the result, and the design trade-offs are documented in
+[docs/algorithms.md](docs/algorithms.md).
+
+This is stated up front on purpose. A reviewer should be able to ask "why this
+threshold / this fusion method / this batching key?" and get an answer that is
+mine, so the honest split between assistance and judgement is written down in
+[docs/provenance.md](docs/provenance.md) rather than left to be discovered.
+
 ## Honest limitations
 
 - The GPU side runs on **stock ComfyUI**; this repo is the orchestration, not the
@@ -244,12 +287,16 @@ Full methodology and caveats in [docs/benchmark.md](docs/benchmark.md).
 - The numbers in [docs/benchmark.md](docs/benchmark.md) mix **measured**
   control-plane timings with **modelled** GPU costs using 2025 market rates; the
   two are labelled separately and should not be quoted as one measurement.
+- The dedup and semantic benchmarks use **synthetic** corpora that isolate index
+  behaviour; there is no image-quality or retrieval-quality metric here.
 - Business traction (nine signed merchants, ~¥50 k in orders) is a fact about the
   company, not something this repository demonstrates. It is included for context
   in [docs/comparison.md](docs/comparison.md) and is clearly marked as such.
 - The pilot ran at small scale: single GPU, tens of merchants. The scheduler and
   dedup index have unit tests but have **not** been stress-tested at thousands of
   concurrent jobs.
+- The repository's commit dates are the **2026 release**, not the 2025 build; see
+  [docs/provenance.md](docs/provenance.md).
 
 ## License
 

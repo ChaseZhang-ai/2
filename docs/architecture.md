@@ -5,10 +5,11 @@ plane is pure Python with no runtime dependencies**, the **GPU plane is stock
 ComfyUI**, and the **data plane is external** (the merchant's knowledge base and
 the campaign metrics store).
 
-This is not a microservice diagram for its own sake. The split exists because the
-product was delivered *on-premises* to SMB customers whose IT teams will not run a
-message broker or a scheduling service. The control plane has to fit inside the
-shipped product; the GPU work has to live wherever the card is.
+This is not a microservice diagram for its own sake. The split is a deployment
+requirement: the product was built to be installed *on-premises* for SMB
+customers whose IT teams will not run a message broker or a scheduling service.
+The control plane has to fit inside the shipped product; the GPU work has to live
+wherever the card is.
 
 ```
 ┌──────────────────────────── control plane (this repo, CPU) ───────────────────────────┐

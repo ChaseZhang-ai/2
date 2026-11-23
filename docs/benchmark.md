@@ -58,8 +58,8 @@ re-render). This isolates the *index* behaviour; it is not a photorealism test.
 ### Semantic dedup — 8/8 content angles recovered
 
 500 candidates drawn from 8 true content angles (cosine threshold 0.95). The
-greedy selection keeps exactly one representative per angle. Embeddings are
-synthetic 2-D; the production system used real CLIP embeddings.
+greedy selection keeps exactly one representative per angle. Embeddings here are
+synthetic 2-D; the intended production setup supplies a real CLIP/text encoder.
 
 ### Cost model — ¥0.0795/image, ¥0.265/min video
 
@@ -71,7 +71,8 @@ image cost  = 1.59 / 20 = ¥0.0795   → 99.92% below the ¥100 studio-shot base
 video cost  = 1.59 / 6  = ¥0.265/min → 98.11% below the ¥14/min editor baseline
 ```
 
-These match the figures quoted to customers during the 2025 pilot.
+These are the same arithmetic figures that were quoted to customers during the
+2025 pilot; they are a cost model, not a metered bill.
 
 ---
 
@@ -82,12 +83,11 @@ These match the figures quoted to customers during the 2025 pilot.
    *measured*. Do not present the two as a single measured result.
 2. **Synthetic dedup corpus.** The 2 000-image dedup corpus is synthetic, chosen
    to isolate index behaviour. Precision on real near-duplicates (crops,
-   re-encodes, colour-graded variants) was validated qualitatively during the
-   pilot but is not quantified here.
+   re-encodes, colour-graded variants) is **not quantified here**; the radius is a
+   starting point to tune per corpus.
 3. **Small scale.** One GPU, tens of merchants, thousands of assets. Not
    stress-tested at thousands of concurrent jobs.
-4. **Quality is not measured here.** Model-shot and digital-human *quality* was
-   judged by customers and by eye. There is no FID / LSE-D number in this repo
-   because the pilot did not collect one — the `lip_sync_gate` exists and is
-   unit-tested, but its thresholds are engineering defaults, not tuned on a
-   labelled set.
+4. **Quality is not measured here.** Model-shot and digital-human *quality* is a
+   human judgement; this repo contains no FID / LSE-D number. The `lip_sync_gate`
+   exists and is unit-tested, but its thresholds are engineering defaults, not
+   tuned on a labelled set.

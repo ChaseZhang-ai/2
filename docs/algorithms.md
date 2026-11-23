@@ -113,8 +113,9 @@ each hash in a **BK-tree** (Burkhard-Keller tree) so a "everything within hammin
 distance ≤ r" query visits only the branches whose edge distance is within
 `[d−r, d+r]`. A candidate must clear *all three* hashes (max-distance rule).
 
-Threshold `r = 6` on 64-bit hashes: empirically catches truncated / re-encoded
-copies while leaving intentionally varied shots alone. Tunable via
+Threshold `r = 6` on 64-bit hashes is a starting point, not a tuned value: it is
+wide enough to catch truncated / re-encoded copies on the test corpus while
+leaving intentionally varied shots alone. Tune it per corpus via
 `NearDuplicateIndex(radius=...)`.
 
 ### Layer 2 — semantic near-duplicates (needs embeddings)

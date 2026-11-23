@@ -34,16 +34,18 @@ The category the company was actually grouped with. The differences are concrete
 | **Metrics stop at play/like counts** | Full-funnel attribution back to each asset (`analytics/roi.py`) |
 | **Product identity drifts** in generated shots | Dual control (depth **+** pose) with scheduled denoise (`generation/model_image.py`) |
 
-The last row is the one customers noticed: competitors' model shots changed the
-product's logo and label text; keeping identity is a *conditioning* problem, not
-a prompting problem.
+The last row is the one that matters most in practice: img2img-based pipelines
+commonly drift the product's logo and label text, because identity is a
+*conditioning* problem, not a prompting problem. This is the failure mode we
+designed the dual-control graph around.
 
 ---
 
 ## vs. off-the-shelf orchestration (Airflow / Temporal / n8n)
 
-For the B-end workflow product, we evaluated and rejected these for on-prem SMB
-deployments:
+For the on-prem-style SMB deployments this product targets, adopting them would
+mean asking the customer's IT team to run a control plane the product does not
+need:
 
 - They require a **control plane the customer's IT will not run**.
 - Their retry/scheduling model is heavier than the flows actually needed
