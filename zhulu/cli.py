@@ -123,6 +123,22 @@ def _cmd_voc(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_angles(args: argparse.Namespace) -> int:
+    from .generation import plan_angles, prompt_diversity
+
+    angles = plan_angles(args.product, args.n, seed=args.seed)
+    if args.json:
+        print(json.dumps(
+            [{"name": a.name, "key": a.key, "prompt": a.prompt} for a in angles],
+            indent=2, ensure_ascii=False,
+        ))
+    else:
+        for a in angles:
+            print(f"[{a.name}] {a.prompt}")
+        print(f"\n{len(angles)} angles, prompt diversity={prompt_diversity(angles):.2f}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="zhulu", description="ZhuluAI engine CLI")
     p.add_argument("--version", action="version", version=f"zhulu {__version__}")
@@ -146,6 +162,13 @@ def build_parser() -> argparse.ArgumentParser:
     sv = sub.add_parser("voc", help="summarise reviews (one per line)")
     sv.add_argument("reviews")
     sv.set_defaults(func=_cmd_voc)
+
+    sa = sub.add_parser("angles", help="plan diverse content angles for a product")
+    sa.add_argument("product")
+    sa.add_argument("-n", type=int, default=5, help="how many angles to plan")
+    sa.add_argument("--seed", type=int, default=0)
+    sa.add_argument("--json", action="store_true", help="emit JSON instead of text")
+    sa.set_defaults(func=_cmd_angles)
     return p
 
 
