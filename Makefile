@@ -15,6 +15,7 @@ cli:
 	python -m zhulu plan video
 	python -m zhulu schedule examples/configs/jobs.json
 	python -m zhulu voc examples/configs/reviews.txt
+	python -m zhulu angles "ceramic mug" -n 5
 
 lint:
 	ruff check zhulu tests examples

@@ -25,6 +25,7 @@ jobs:
           python -m zhulu plan model_image --input product.png
           python -m zhulu schedule examples/configs/jobs.json
           python -m zhulu voc examples/configs/reviews.txt
+          python -m zhulu angles "ceramic mug" -n 5
       - name: Examples smoke test
         run: |
           PYTHONPATH=. python examples/generate_model_image.py
